@@ -593,6 +593,12 @@ if [[ $DOWNLOAD_MIRROR == "china" ]] ; then
 		UBUNTU_MIRROR='repo.huaweicloud.com/ubuntu-ports/'
 	fi
 
+ 	if [[ ${CHINA_DOWNLOAD_MIRROR} == yandex ]]; then
+		DEBIAN_MIRROR='mirror.yandex.ru/debian/'
+		DEBIAN_SECURTY='mirror.yandex.ru/debian-security/'
+		UBUNTU_MIRROR='mirror.yandex.ru/ubuntu-ports/'
+	fi
+
 	RASPI_MIRROR='mirrors.ustc.edu.cn/archive.raspberrypi.org/debian/'
 
 fi
