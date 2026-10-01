@@ -15,10 +15,16 @@ Follow the BRANCH/LOCALVERSION scheme when both are provided and keep the
 upstream behaviour otherwise (e.g. for a plain "make bindeb-pkg").
 
 diff --git a/scripts/package/mkdebian b/scripts/package/mkdebian
-index d4b007b38..31690f691 100755
+index d4b007b38..32657ab3c 100755
 --- a/scripts/package/mkdebian
 +++ b/scripts/package/mkdebian
-@@ -169,7 +169,15 @@ sourcename=${KDEB_SOURCENAME:-linux-upstream}
+@@ -164,12 +164,20 @@ else
+ 	debian_revision=$("${srctree}/scripts/build-version")
+ 	packageversion=${upstream_version}-${debian_revision}
+ fi
+-sourcename=${KDEB_SOURCENAME:-linux-upstream}
++sourcename=${KDEB_SOURCENAME:-linux-${KERNELRELEASE}}
+ 
  if [ "$ARCH" = "um" ] ; then
  	packagename=user-mode-linux
  else

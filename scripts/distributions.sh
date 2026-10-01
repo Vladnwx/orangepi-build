@@ -326,7 +326,10 @@ PRE_INSTALL_KERNEL_DEBS
 	# install kernel
 	[[ -n $KERNELSOURCE ]] && {
 		if [[ "${REPOSITORY_INSTALL}" != *kernel* ]]; then
-			VER=$(dpkg --info "${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb" | awk -F"-" '/Source:/{print $2}')
+			# Derive the kernel release from the package contents: the "Source:"
+			# field is not usable, upstream packaging calls every kernel
+			# "linux-upstream".
+			VER=$(dpkg-deb -c "${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb" | sed -n 's|.*\./lib/modules/\([^/]*\)/.*|\1|p' | head -1)
 
 			install_deb_chroot "${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb"
 			if [[ -f ${DEB_STORAGE}/${CHOSEN_KERNEL/image/dtb}_${REVISION}_${ARCH}.deb ]]; then
@@ -991,7 +994,9 @@ install_opi_specific()
 	install_deb_chroot "${DEB_STORAGE}/u-boot/${CHOSEN_UBOOT}_${REVISION}_${ARCH}.deb"
 
 	# install kernel
-	VER=$(dpkg --info "${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb" | awk -F"-" '/Source:/{print $2}')
+	# Derive the kernel release from the package contents: the "Source:" field
+	# is not usable, upstream packaging calls every kernel "linux-upstream".
+	VER=$(dpkg-deb -c "${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb" | sed -n 's|.*\./lib/modules/\([^/]*\)/.*|\1|p' | head -1)
 	install_deb_chroot "${DEB_STORAGE}/${CHOSEN_KERNEL}_${REVISION}_${ARCH}.deb"
 	if [[ -f ${DEB_STORAGE}/${CHOSEN_KERNEL/image/dtb}_${REVISION}_${ARCH}.deb ]]; then
 		install_deb_chroot "${DEB_STORAGE}/${CHOSEN_KERNEL/image/dtb}_${REVISION}_${ARCH}.deb"
