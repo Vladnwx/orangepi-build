@@ -1,0 +1,25 @@
+#!/bin/bash
+#
+# The sunxi boot script loads a fixed /boot/Image (uncompressed) or
+# /boot/Image.gz (gzip compressed), while the kernel package only installs
+# /boot/vmlinuz-<version>. Create the stable alias the boot script expects.
+#
+# The vendor kernel packaging creates /boot/Image itself; this also covers
+# upstream kernels, whose arm64 default build target is the compressed
+# Image.gz, and keeps the alias correct across kernel upgrades.
+#
+set -e
+
+version="$1"
+image="$2"
+
+[ -n "$version" ] && [ -f "$image" ] || exit 0
+
+# gzip magic 1f 8b
+if [ "$(od -An -tx1 -N2 "$image" | tr -d ' \n')" = "1f8b" ]; then
+	ln -sf "vmlinuz-$version" /boot/Image.gz
+else
+	ln -sf "vmlinuz-$version" /boot/Image
+fi
+
+exit 0
