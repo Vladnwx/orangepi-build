@@ -1,0 +1,81 @@
+From: Vladimir Savelev <anykey196@gmail.com>
+Date: Thu, 24 Sep 2026 18:00:00 +0500
+Subject: [PATCH] arm64: dts: allwinner: h618: orangepi-zero2w: add SDIO WiFi/BT (AW859A)
+
+Enable the SDIO bus (mmc1) and power the on-board AW859A (UWE5622)
+WiFi/BT combo through an mmc-pwrseq-simple that resets WL_REG_ON (PG18)
+and gates the RTC 32 kHz fanout clock (PG10), with the 3.3 V and 1.8 V
+supplies.  The pwrseq clock must be named "ext_clock" and its output pin
+muxed to the clock function, as done for the other H616/H618 boards.
+
+Also add the "uwe-bsp" node looked up by the out-of-tree uwe5622 driver.
+
+Signed-off-by: Vladimir Savelev <anykey196@gmail.com>
+---
+--- a/arch/arm64/boot/dts/allwinner/sun50i-h618-orangepi-zero2w.dts
++++ b/arch/arm64/boot/dts/allwinner/sun50i-h618-orangepi-zero2w.dts
+@@ -179,3 +179,64 @@
+ 	usb1_vbus-supply = <&reg_vcc5v>;
+ 	status = "okay";
+ };
++
++/ {
++	reg_vcc33_wifi: vcc33-wifi {
++		/* Always-on 3.3V regulator for WiFi and BT */
++		compatible = "regulator-fixed";
++		regulator-name = "vcc33-wifi";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		regulator-always-on;
++		vin-supply = <&reg_vcc5v>;
++	};
++
++	reg_vcc_wifi_io: vcc-wifi-io {
++		/* Always-on 1.8V regulator for WiFi and BT IO */
++		compatible = "regulator-fixed";
++		regulator-name = "vcc-wifi-io";
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++		regulator-always-on;
++		vin-supply = <&reg_vcc33_wifi>;
++	};
++
++	wifi_pwrseq: wifi-pwrseq {
++		compatible = "mmc-pwrseq-simple";
++		clocks = <&rtc CLK_OSC32K_FANOUT>;
++		clock-names = "ext_clock";
++		pinctrl-names = "default";
++		pinctrl-0 = <&x32clk_fanout_pin>;
++		reset-gpios = <&pio 6 18 GPIO_ACTIVE_LOW>;	/* PG18 */
++		post-power-on-delay-ms = <200>;
++	};
++
++	/*
++	 * UWE5622/AW859A BSP glue: the out-of-tree driver looks this node up
++	 * by name (of_find_node_by_name) when CONFIG_WCN_PARSE_DTS is set.
++	 */
++	uwe-bsp {
++		compatible = "unisoc,uwe_bsp";
++		wl-reg-on = <&pio 6 18 GPIO_ACTIVE_HIGH>;	/* PG18 */
++		bt-reg-on = <&pio 6 19 GPIO_ACTIVE_HIGH>;	/* PG19 */
++		bt_hostwake = <&pio 6 16 GPIO_ACTIVE_HIGH>;	/* PG16 */
++		wl-wake-host;
++		wl-wake-host-gpio = <&pio 6 15 GPIO_ACTIVE_HIGH>;	/* PG15 */
++		int-gpio = <&pio 6 15 GPIO_ACTIVE_HIGH>;
++		pub-int-gpio = <&pio 6 15 GPIO_ACTIVE_HIGH>;
++		sdio-ext-int-gpio = <&pio 6 15 GPIO_ACTIVE_HIGH>;
++		data-irq;
++		blksz-512;
++		keep-power-on;
++	};
++};
++
++&mmc1 {
++	vmmc-supply = <&reg_vcc33_wifi>;
++	vqmmc-supply = <&reg_vcc_wifi_io>;
++	mmc-pwrseq = <&wifi_pwrseq>;
++	bus-width = <4>;
++	non-removable;
++	mmc-ddr-1_8v;
++	status = "okay";
++};
