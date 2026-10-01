@@ -1,0 +1,64 @@
+Subject: [PATCH] kbuild: name the deb packages after the branch and local version
+
+The build system picks up the kernel packages by name: it looks for
+linux-image-<branch><localversion>, linux-headers-<branch><localversion> and
+linux-dtb-<branch><localversion>, and derives them from BRANCH and
+LOCALVERSION, both of which it passes on the make command line.
+
+Upstream names them after the kernel release instead, so a mainline kernel
+produces linux-image-7.2.0-sun50iw9 and the build system never finds it:
+
+  [ error ] Installation of /root/linux-image-mainline-sun50iw9_1.0.4_arm64.deb
+            failed
+
+Follow the BRANCH/LOCALVERSION scheme when both are provided and keep the
+upstream behaviour otherwise (e.g. for a plain "make bindeb-pkg").
+
+diff --git a/scripts/package/mkdebian b/scripts/package/mkdebian
+index d4b007b38..31690f691 100755
+--- a/scripts/package/mkdebian
++++ b/scripts/package/mkdebian
+@@ -169,7 +169,15 @@ sourcename=${KDEB_SOURCENAME:-linux-upstream}
+ if [ "$ARCH" = "um" ] ; then
+ 	packagename=user-mode-linux
+ else
+-	packagename=linux-image
++	# Name the packages the way the build system expects them
++	# (linux-image-<branch><localversion>). Fall back to the kernel release
++	# when BRANCH/LOCALVERSION are not provided, as with a plain make.
++	if [ -n "${BRANCH:-}${LOCALVERSION:-}" ]; then
++		package_suffix="${BRANCH:-}${LOCALVERSION:-}"
++	else
++		package_suffix="${KERNELRELEASE}"
++	fi
++	packagename=linux-image-${package_suffix}
+ fi
+ 
+ debarch=
+@@ -215,7 +223,7 @@ Build-Depends-Arch: bc, bison, flex,
+  python3:native, rsync
+ Homepage: https://www.kernel.org/
+ 
+-Package: $packagename-${KERNELRELEASE}
++Package: $packagename
+ Architecture: $debarch
+ Description: Linux kernel, version ${KERNELRELEASE}
+  This package contains the Linux kernel, modules and corresponding other
+@@ -238,7 +246,7 @@ EOF
+ if is_enabled CONFIG_MODULES; then
+ cat <<EOF >> debian/control
+ 
+-Package: linux-headers-${KERNELRELEASE}
++Package: linux-headers-${package_suffix}
+ Architecture: $debarch
+ Build-Profiles: <!pkg.${sourcename}.nokernelheaders>
+ Description: Linux kernel headers for ${KERNELRELEASE} on $debarch
+@@ -252,7 +260,7 @@ fi
+ if is_enabled CONFIG_DEBUG_INFO; then
+ cat <<EOF >> debian/control
+ 
+-Package: linux-image-${KERNELRELEASE}-dbg
++Package: linux-image-${package_suffix}-dbg
+ Section: debug
+ Architecture: $debarch
+ Build-Profiles: <!pkg.${sourcename}.nokerneldbg>
