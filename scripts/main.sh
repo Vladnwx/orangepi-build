@@ -291,6 +291,7 @@ if [[ -z $BRANCH ]]; then
 	[[ $KERNEL_TARGET == *current* ]] && options+=("current" "Recommended. Come with best support")
 	[[ $KERNEL_TARGET == *legacy* ]] && options+=("legacy" "Old stable / Legacy")
 	[[ $KERNEL_TARGET == *next* ]] && options+=("next" "Use the latest kernel")
+	[[ $KERNEL_TARGET == *mainline* ]] && options+=("mainline" "Use upstream U-Boot, TF-A and kernel")
 
 	menustr="Select the target kernel branch\nExact kernel versions depend on selected board"
 	# do not display selection dialog if only one kernel branch is available
