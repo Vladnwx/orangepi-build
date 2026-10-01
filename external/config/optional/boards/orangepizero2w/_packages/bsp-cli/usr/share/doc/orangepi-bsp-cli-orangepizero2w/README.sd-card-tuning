@@ -1,0 +1,42 @@
+SD card longevity tuning for the OrangePi Zero 2W
+=================================================
+
+The Zero 2W boots from an SD card, which is the part most likely to wear out.
+Everything in this board support package exists to keep writes off the card.
+The board is expected to spend most of its life serving files (Samba) and
+writing rarely.
+
+Already handled by the vendor image
+-----------------------------------
+  * /etc/fstab mounts / with "noatime,commit=600,errors=remount-ro".
+    noatime removes the per-read metadata write, commit=600 reduces the ext4
+    journal commits to one every ten minutes.
+  * /tmp is a tmpfs.
+  * systemd-journald runs with Storage=volatile, i.e. the journal lives in RAM.
+
+Added here
+----------
+  * etc/sysctl.d/90-sd-card.conf
+      batches dirty writeback (60s), keeps caches, and makes the kernel use
+      zram swap instead of dropping cache.
+  * etc/default/zramswap
+      compressed swap in RAM (50% of RAM, zstd, priority 100). The zram-tools
+      package is installed by family_tweaks_s; the kernel needs CONFIG_ZRAM.
+  * /var/log and /var/tmp are mounted as tmpfs (fstab entries added by
+      family_tweaks_s), so logs never touch the card. Logs are therefore
+      volatile: use "journalctl -b" while the system runs.
+  * etc/tmpfiles.d/var-log.conf
+      recreates the /var/log subdirectories (apt, journal, samba, private)
+      after the tmpfs mount.
+  * Masked systemd units
+      apt-daily.timer, apt-daily-upgrade.timer, dpkg-db-backup.timer,
+      e2scrub_all.timer, man-db.timer, logrotate.timer, rsyslog.service.
+      The apt timers are the largest recurring writer on an otherwise idle
+      system; rsyslog duplicates what the (volatile) journal already keeps.
+
+Optional / manual
+-----------------
+  * Samba: keep "log level = 0" and the default "max log size"; with /var/log
+    in RAM even verbose logging cannot wear the card.
+  * Run "systemctl mask" on any additional timer you do not need.
+  * To make logs persistent again, drop the /var/log line from /etc/fstab.
