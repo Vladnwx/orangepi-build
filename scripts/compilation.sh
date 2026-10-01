@@ -541,6 +541,16 @@ CUSTOM_KERNEL_CONFIG
 
 	display_alert "Creating packages"
 
+	# DPKG_FLAGS="-d" skips dpkg-buildpackage's build dependency check.
+	#
+	# The kernel is already compiled at this point, and for a cross build that
+	# check is misleading anyway: dpkg-buildpackage passes the target
+	# architecture down, so an upstream kernel's "libssl-dev:native" turns into
+	# a request for libssl-dev:arm64 on the build host, which is not there and
+	# would not be used. Without this, mainline kernels abort with
+	# "dpkg-checkbuilddeps: error: unmet build dependencies: libssl-dev".
+	# The vendor kernel ships its own debian/control and does not ask for it.
+
 	# produce deb packages: image, headers, firmware, dtb
 	echo -e "\n\t== deb packages: image, headers, firmware, dtb ==\n" >> "${DEST}"/${LOG_SUBPATH}/compilation.log
 	eval CCACHE_BASEDIR="$(pwd)" env PATH="${toolchain}:${PATH}" \
@@ -553,6 +563,7 @@ CUSTOM_KERNEL_CONFIG
 		ARCH=$ARCHITECTURE \
 		DEBFULLNAME="$MAINTAINER" \
 		DEBEMAIL="$MAINTAINERMAIL" \
+		DPKG_FLAGS="-d" \
 		CROSS_COMPILE="$CCACHE $KERNEL_COMPILER" 2>>$DEST/${LOG_SUBPATH}/compilation.log' \
 		${PROGRESS_LOG_TO_FILE:+' | tee -a $DEST/${LOG_SUBPATH}/compilation.log'} \
 		${OUTPUT_DIALOG:+' | dialog --backtitle "$backtitle" --progressbox "Creating kernel packages..." $TTY_Y $TTY_X'} \
